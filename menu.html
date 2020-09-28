@@ -21,24 +21,24 @@ function myFunction() {
   BadgeCount:badge,
   PageId:pageId
   };
- // try
- // {
+  try
+  {
   window.webkit.messageHandlers.EngageJsMenuApiBridge.postMessage(t);
-//  }
-//  catch()
-//  {
+  }
+  catch(ex)
+  {
   
-//  }
+  }
   
   //try update on Android
-  //try
-  //{
-  //EngageJsMenuApiBridge.postMessage(JSON.stringify(t));
-  //}
-  //catch()
-  //{
+  try
+  {
+  EngageJsMenuApiBridge.postMessage(JSON.stringify(t));
+  }
+  catch(ex)
+  {
   
-  //}
+  }
   
 }
 </script>
