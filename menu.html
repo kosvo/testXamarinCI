@@ -12,8 +12,8 @@ Enter Menu PAGE ID: <input type="text" id="pageId" value="1">
 
 <script>
 function myFunction() {
-  var badge =  document.getElementById("badge").value;
-  var pageId = document.getElementById("pageId").value;
+ // var badge =  document.getElementById("badge").value;
+ // var pageId = document.getElementById("pageId").value;
   //try update on iOS
   
 
@@ -24,9 +24,9 @@ function myFunction() {
   {
   window.webkit.messageHandlers.EngageJsMenuApiBridge.postMessage(t);
   }
-  catch()
+  catch(ex)
   {
-  
+    alert(ex);
   }
   
   //try update on Android
