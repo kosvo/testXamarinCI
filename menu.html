@@ -12,32 +12,33 @@ Enter Menu PAGE ID: <input type="text" id="pageId" value="1">
 
 <script>
 function myFunction() {
- // var badge =  document.getElementById("badge").value;
- // var pageId = document.getElementById("pageId").value;
+  var badge =  document.getElementById("badge").value;
+  var pageId = document.getElementById("pageId").value;
   //try update on iOS
   
 
   var t={
-  BadgeValue:1,
-  PageId:2};
-  try
-  {
+  BadgeValue:badge,
+  PageId:pageId
+  };
+ // try
+ // {
   window.webkit.messageHandlers.EngageJsMenuApiBridge.postMessage(t);
-  }
-  catch(ex)
-  {
-    alert(ex);
-  }
+//  }
+//  catch()
+//  {
+  
+//  }
   
   //try update on Android
-  try
-  {
-  EngageJsMenuApiBridge.postMessage(JSON.stringify(t));
-  }
-  catch()
-  {
+  //try
+  //{
+  //EngageJsMenuApiBridge.postMessage(JSON.stringify(t));
+  //}
+  //catch()
+  //{
   
-  }
+  //}
   
 }
 </script>
