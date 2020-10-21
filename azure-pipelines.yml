@@ -129,7 +129,7 @@ jobs:
       solutionFile: '**/iOS/*.csproj'
       configuration: 'Release'
       buildForSimulator: false
-      packageApp: $(IsMainBranch)
+      packageApp: true
       runNugetRestore: false
       args: '/p:OutputPath="$(Build.BinariesDirectory)"'
       signingIdentity: '$(APPLE_CERTIFICATE_SIGNING_IDENTITY)'
