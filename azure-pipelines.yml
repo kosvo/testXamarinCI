@@ -1,32 +1,154 @@
-# Xamarin.iOS
-# Build a Xamarin.iOS project.
-# Add steps that install certificates, test, sign, and distribute an app, save build artifacts, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/xamarin
+jobs:
 
-trigger:
-- master
+- job: Android
+  
+  pool:
+    vmImage: 'windows-2019'
 
-pool:
-  vmImage: 'macos-latest'
+  variables:
+  - group: 'CI-Build'
+  - name: IsMainBranch
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
 
-steps:
-# To manually select a Xamarin SDK version on the Microsoft-hosted macOS agent,
-# configure this task with the *Mono* version that is associated with the
-# Xamarin SDK version that you need, and set the "enabled" property to true.
-# See https://go.microsoft.com/fwlink/?linkid=871629
-- script: sudo $AGENT_HOMEDIRECTORY/scripts/select-xamarin-sdk.sh 5_12_0
-  displayName: 'Select the Xamarin SDK version'
-  enabled: false
+  steps:
 
-- task: NuGetToolInstaller@1
+  # Restore full solution and run tests
+  - task: NuGetToolInstaller@1
+    displayName: 'Install NuGet'
 
-- task: NuGetCommand@2
-  inputs:
-    restoreSolution: '**/*.sln'
+  - task: VSBuild@1
+    displayName: 'Restore Packages'
+    inputs:
+      solution: '**/$(SolutionName)'
+      configuration: '$(BuildConfiguration)'
+      vsVersion: '16.0'
+      msbuildArgs: '/t:Restore'
 
-- task: XamariniOS@2
-  inputs:
-    solutionFile: '**/*.sln'
-    configuration: 'Debug'
-    buildForSimulator: true
-    packageApp: false
+  - task: DotNetCoreCLI@2
+    displayName: "Run Tests"
+    inputs:
+      command: test
+      projects: '**/*.Tests/*.csproj'
+      arguments: '-c $(BuildConfiguration) --no-restore'
+
+  # Build Android package
+  - task: android-manifest-version@1
+    displayName: 'Update Android Version Number'
+    inputs:
+      sourcePath: '$(AndroidManifestPath)'
+      versionCodeOption: 'buildid'
+      versionCode: '$(Build.BuildId)'
+      printFile: true
+
+  - task: XamarinAndroid@1
+    displayName: 'Build Android Package (Release)'
+    inputs:
+      projectFile: '**/Droid/*.csproj'
+      outputDirectory: '$(Build.BinariesDirectory)'
+      configuration: 'Release'
+      msbuildVersionOption: '16.0'
+
+  - task: CopyFiles@2
+    displayName: 'Copy APK to Staging Directory'
+    condition: and(succeeded(), eq(variables['IsMainBranch'], true)) 
+    inputs:
+      sourceFolder: '$(Build.BinariesDirectory)' 
+      contents: '**/*.apk'
+      targetFolder: $(Build.ArtifactStagingDirectory)
+  
+  # Publish Android package for main branch builds
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Build Artifacts'
+    condition: and(succeeded(), eq(variables['IsMainBranch'], true)) 
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: 'Android'
+
+- job: iOS
+  dependsOn: Android
+
+  pool:
+    vmImage: 'macOS-latest'
+
+  variables:
+  - group: 'CI-Build'
+  - name: IsMainBranch
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
+  
+  steps:
+  
+  # Install .NET Core SDK
+  - task: UseDotNet@2
+    displayName: 'Install .NET Core SDK'
+    inputs:
+      packageType: sdk
+      version: $(DotNetCoreVersion)
+  
+  # Select Mono SDK Version used by Xamarin
+  - script: sudo $AGENT_HOMEDIRECTORY/scripts/select-xamarin-sdk.sh $(MonoVersion) 
+    displayName: 'Select Xamarin SDK Version'
+
+  # Install Signing Certificate and Provisioning Profile
+  - task: InstallAppleCertificate@2
+    displayName: 'Install Apple Signing Identity'
+    inputs:
+      certSecureFile: 'Mobile_DevOps_AdHoc_Certificate.p12'
+      certPwd: '$(AppleCertificatePassword)'
+      keychain: 'temp'
+      deleteCert: true 
+     
+  - task: InstallAppleProvisioningProfile@1
+    displayName: 'Install Apple Provisioning Profile'
+    inputs:
+      provisioningProfileLocation: 'secureFiles'
+      provProfileSecureFile: 'Mobile_DevOps_AdHoc.mobileprovision'
+      removeProfile: true
+
+  # Install NuGet and Restore Solution
+  - task: NuGetToolInstaller@1
+    displayName: 'Install NuGet'
+
+  - task: NuGetCommand@2
+    displayName: 'Restore NuGet Packages'
+    inputs:
+      restoreSolution: '**/$(SolutionName)'
+
+  # Update iOS Version
+  - task: ios-bundle-version@1
+    displayName: 'Update iOS Version Number'
+    inputs:
+      sourcePath: '$(AppleSettingsFileName)'
+      versionCodeOption: 'buildid'
+      versionCode: '$(Build.BuildId)'
+      printFile: true
+
+  # Build and Sign IPA file from iOS project
+  - task: XamariniOS@2
+    displayName: 'Build iOS Package'
+    inputs:
+      solutionFile: '**/iOS/*.csproj'
+      configuration: 'Release'
+      buildForSimulator: false
+      packageApp: $(IsMainBranch)
+      runNugetRestore: false
+      args: '/p:OutputPath="$(Build.BinariesDirectory)"'
+      signingIdentity: '$(APPLE_CERTIFICATE_SIGNING_IDENTITY)'
+      signingProvisioningProfileID: '$(APPLE_PROV_PROFILE_UUID)'
+
+  # Copy and Publish IPA Output
+  - task: CopyFiles@2
+    displayName: 'Copy IPA to Staging Directory'
+    condition: and(succeeded(), eq(variables['IsMainBranch'], true)) 
+    inputs:
+      sourceFolder: '$(Build.BinariesDirectory)' 
+      contents: |
+        **/*.ipa
+        **/*.dSYM/**
+      targetFolder: $(Build.ArtifactStagingDirectory)
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Build Artifacts'
+    condition: and(succeeded(), eq(variables['IsMainBranch'], true)) 
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: 'iOS'
