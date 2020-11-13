@@ -42,6 +42,38 @@ function myFunction() {
   }
   
 }
+
+function openPageFunction() {
+  var pageUrl = "https://somepageurl/1";
+  var pageId = document.getElementById("pageId").value;
+
+  //try update on iOS
+  
+
+  var openPageModel={
+  PageId:pageId,
+  PageUrl:pageUrl
+  };
+  try
+  {
+  window.webkit.messageHandlers.EngageJsOpenPageApiBridge.postMessage(openPageModel);
+  }
+  catch(ex)
+  {
+  
+  }
+  
+  //try update on Android
+  try
+  {
+  EngageJsOpenPageApiBridge.postMessage(JSON.stringify(openPageModel));
+  }
+  catch(ex)
+  {
+  
+  }
+  
+}
 </script>
 
 </body>
