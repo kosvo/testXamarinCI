@@ -17,13 +17,14 @@ function myFunction() {
   //try update on iOS
   
 
-  var t={
+  var menuModel={
   BadgeCount:badge,
-  PageId:pageId
+  PageId:pageId,
+  RefreshPage:true
   };
   try
   {
-  window.webkit.messageHandlers.EngageJsMenuApiBridge.postMessage(t);
+  window.webkit.messageHandlers.EngageJsMenuApiBridge.postMessage(menuModel);
   }
   catch(ex)
   {
@@ -33,7 +34,7 @@ function myFunction() {
   //try update on Android
   try
   {
-  EngageJsMenuApiBridge.postMessage(JSON.stringify(t));
+  EngageJsMenuApiBridge.postMessage(JSON.stringify(menuModel));
   }
   catch(ex)
   {
